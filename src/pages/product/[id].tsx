@@ -5,9 +5,7 @@ import {
   ProductDetails,
 } from '@/styles/pages/product'
 import axios from 'axios'
-import { privateDecrypt } from 'crypto'
 import { GetStaticPaths, GetStaticProps } from 'next'
-import { flightRouterStateSchema } from 'next/dist/server/app-render/types'
 import Image from 'next/image'
 import { useState } from 'react'
 import Stripe from 'stripe'
