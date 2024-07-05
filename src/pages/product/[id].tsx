@@ -4,8 +4,12 @@ import {
   ProductContainer,
   ProductDetails,
 } from '@/styles/pages/product'
+import axios from 'axios'
+import { privateDecrypt } from 'crypto'
 import { GetStaticPaths, GetStaticProps } from 'next'
+import { flightRouterStateSchema } from 'next/dist/server/app-render/types'
 import Image from 'next/image'
+import { useState } from 'react'
 import Stripe from 'stripe'
 
 interface ProductProps {
@@ -15,10 +19,38 @@ interface ProductProps {
     imageUrl: string
     price: string
     description: string
+    defaultPriceId: string
   }
 }
 
 export default function Product({ product }: ProductProps) {
+  const [isCreatingCheckoutSession, setIsCreatingCheckoutSession] =
+    useState(false)
+
+  async function handleByProduct() {
+    try {
+      setIsCreatingCheckoutSession(true)
+      const response = await axios.post('/api/checkout', {
+        priceId: product.defaultPriceId,
+      })
+
+      const { checkoutUrl } = response.data
+
+      // Redirecionar o cliente para o checkout do Stripe
+      window.location.href = checkoutUrl
+
+      /**
+       * Redirecionar para rota interna
+       * router.push('/checkout')
+       */
+    } catch (error) {
+      setIsCreatingCheckoutSession(false)
+
+      // Conectar a uma ferramenta de observabilidade (Datadog | Sentry)
+      alert('Falha ao redirecionar ao checkout!')
+    }
+  }
+
   return (
     <ProductContainer>
       <ImageContainer>
@@ -30,7 +62,9 @@ export default function Product({ product }: ProductProps) {
 
         <p>{product.description}</p>
 
-        <button>Comprar agora</button>
+        <button disabled={isCreatingCheckoutSession} onClick={handleByProduct}>
+          Comprar agora
+        </button>
       </ProductDetails>
     </ProductContainer>
   )
@@ -71,6 +105,7 @@ export const getStaticProps: GetStaticProps<any, { id: string }> = async ({
           currency: 'BRL',
         }).format(price.unit_amount ? price.unit_amount / 100 : 0),
         description: product.description,
+        defaultPriceId: price.id,
       },
     },
     revalidate: 60 * 60 * 2, // 2 hours
